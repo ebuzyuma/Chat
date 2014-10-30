@@ -28,9 +28,6 @@ function getHandler(req, res) {
 	console.log('token: ' + token);
 	console.log('history size: ' + history.length);
 
-	if (token === undefined)
-		return;
-	
 	if(token > history.length) {
 		responseWith(res, 401, token, null);
 		return;
