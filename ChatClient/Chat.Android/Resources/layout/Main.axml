@@ -5,20 +5,44 @@
     android:minHeight="25px"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/linearLayout1">
-    <ListView
+    android:id="@+id/MainLayout">
+    <LinearLayout
+        android:orientation="vertical"
+        android:id="@+id/MessagesLayout"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:minWidth="200dp"
+        android:minHeight="200dp"
+        android:layout_weight="1"
+        android:layout_alignParentBottom="true">
+        <ListView
+            android:minWidth="25px"
+            android:minHeight="25px"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/MessagesList"
+            android:stackFromBottom="true"
+            android:transcriptMode="alwaysScroll" />
+    </LinearLayout>
+    <LinearLayout
+        android:orientation="horizontal"
         android:minWidth="25px"
         android:minHeight="25px"
-        android:layout_width="match_parent"
+        android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:id="@+id/MessagesList" />
-    <EditText
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/MessageField" />
-    <Button
-        android:text="Send"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/SendButton" />
+        android:id="@+id/MessageFormLayout"
+        android:layout_alignParentBottom="true"
+        android:layout_weight="0">
+        <EditText
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="4"
+            android:id="@+id/MessageField" />
+        <Button
+            android:text="Send"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:id="@+id/SendButton" />
+    </LinearLayout>
 </LinearLayout>
