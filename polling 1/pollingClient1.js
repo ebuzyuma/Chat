@@ -1,6 +1,6 @@
 var http = require('http');
 var util = require('util');
-var getIp = require('..\\getIp');
+var getIp = require('./getIp');
 
 var ip = getIp();
 var port = 31337;

@@ -4,7 +4,7 @@ var util = require('util');
 var toBeResponded = [];
 var assert = require('assert');
 var url = require('url');
-var getIp = require('..\\getIp');
+var getIp = require('./getIp.js');
 
 var ip = getIp();
 var port = 31337;
