@@ -3,46 +3,44 @@ using System.Net;
 using System.Json;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace Chat.Core
 {
 	public class ServerHelper
 	{
-		private readonly string _serverUrl = "http://172.24.80.54:31337/";
+		//private readonly string _serverUrl = "http://172.24.80.54:31337/";
+		private readonly string _defaultServerUrl = "http://192.168.137.1:31337/";
 		private readonly string _getUrlTemplate = "{0}?token={1}";
 
 		private int _token;
-
 		private Action<List<string>> _populateView;
 
-		public ServerHelper (Action<List<string>> populateView)
+		public string ServerUrl { get; set; }
+
+		public ServerHelper (Action<List<string>> populateView, string serverUrl = null)
 		{
 			_token = 0;
 			_populateView = populateView;
+			ServerUrl = serverUrl ?? _defaultServerUrl;
 		}
 
-		public void Get ()
+		public async Task GetAsync ()
 		{
-			string url = String.Format(_getUrlTemplate, _serverUrl, _token);
+			string url = String.Format(_getUrlTemplate, ServerUrl, _token);
 
-			WebRequest httpReq = WebRequest.Create (url);
-			httpReq.BeginGetResponse (ResponseGetCallback, httpReq);
+			WebRequest request = WebRequest.Create (url);
+			WebResponse response = await request.GetResponseAsync ();
+
+			ParseResults (response);
+
+			GetAsync ();
 		}
 
-		private void ResponseGetCallback (IAsyncResult ar)
+		private void ParseResults (WebResponse response)
 		{
-			var httpReq = (WebRequest) ar.AsyncState;
-
-			using (WebResponse httpRes = httpReq.EndGetResponse (ar)) {
-				ParseResults (httpRes);
-			}
-
-			Get ();
-		}
-
-		private void ParseResults (WebResponse httpRes)
-		{
-			JsonObject jsonObject = (JsonObject)JsonObject.Load (httpRes.GetResponseStream());
+			JsonObject jsonObject = (JsonObject)JsonObject.Load (response.GetResponseStream());
 			List<string> incomingMessages = ((JsonArray)jsonObject ["messages"]).Select(p => (string)p).ToList();
 
 			int incomingToken = (int)jsonObject["token"];
@@ -55,33 +53,25 @@ namespace Chat.Core
 			}
 		}
 
-		public void Post(string message)
+		public async Task Post(string message)
 		{
-			var request = WebRequest.Create (_serverUrl);
+			_token++;
+			Task.Factory.StartNew(
+				() => _populateView(new List<string>{message}));
+
+			WebRequest request = WebRequest.Create (ServerUrl);
 			request.Method = "POST";
+
 			using (var stream = request.GetRequestStream ()) 
 			{
 				var jsonObj = new JsonPrimitive (message);
 				jsonObj.Save (stream);
 
-				_token++;
-				_populateView (new List<string>{message});
-
-				request.BeginGetResponse (ResponsePostCallback, request);
+				using (var response = request.GetResponse ()) 
+				{
+				}
 			}
 		}
-
-		private void ResponsePostCallback (IAsyncResult ar)
-		{
-			var httpReq = (WebRequest) ar.AsyncState;
-
-			using (WebResponse httpRes = httpReq.EndGetResponse (ar))
-			{
-
-			}
-
-		}
-
 	}
 }
 
