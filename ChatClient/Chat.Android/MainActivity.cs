@@ -12,6 +12,8 @@ using Android.Views;
 using Android.Widget;
 using Android.OS;
 using Chat.Core;
+using Android.Views.InputMethods;
+using System.Threading.Tasks;
 
 namespace Chat.Droid
 {
@@ -19,8 +21,11 @@ namespace Chat.Droid
 	public class MainActivity : Activity
 	{
 		private ServerHelper _serverHelper;
-		private Button _sendButton;
+
 		private EditText _messageForm;
+
+		private AlertDialog _serverAlertDialog;
+		private AlertDialog _userNameAlertDialog;
 
 		protected override void OnCreate (Bundle bundle)
 		{
@@ -31,33 +36,87 @@ namespace Chat.Droid
 			ListView list = FindViewById<ListView> (Resource.Id.MessagesList);
 			list.Adapter = new ArrayAdapter<string> (this, Android.Resource.Layout.SimpleListItem1);
 
-			_sendButton = FindViewById<Button> (Resource.Id.SendButton);			
-			_sendButton.Click += SendButtonClick;
+			Button sendButton = FindViewById<Button> (Resource.Id.SendButton);			
+			sendButton.Click += (sender, e) => SendMessage();;
 
 			_messageForm = FindViewById<EditText>(Resource.Id.MessageField);
-			_messageForm.KeyPress += HandleEnterClick;
+			_messageForm.EditorAction += HandleEnterClick;
 
 			_serverHelper = new ServerHelper (PopulateView);
 			_serverHelper.GetAsync ();
-		}
 
-		private void SendButtonClick(object sender, EventArgs e)
+			_serverAlertDialog = CreateAlertDialog ("Server", UpdateServerClick);
+			_userNameAlertDialog = CreateAlertDialog ("User Name", UpdateUserNameClick);
+
+			Button serverPopUpButton = FindViewById<Button> (Resource.Id.ServerPopUpButton);			
+			serverPopUpButton.Click += ServerPopUpClick;
+
+			Button userNamePopUpButton = FindViewById<Button> (Resource.Id.UserNamePopUpButton);			
+			userNamePopUpButton.Click += UserNamePopUpClick;
+		}
+			
+		private void SendMessage ()
 		{
 			if (!String.IsNullOrWhiteSpace(_messageForm.Text))
 			{
-				_serverHelper.Post(_messageForm.Text);
+				_serverHelper.PostAsync(_messageForm.Text);
 				_messageForm.Text = String.Empty;
 			}
 		}
 
-		private void HandleEnterClick(object sender, View.KeyEventArgs e)
+		private void HandleEnterClick(object sender, TextView.EditorActionEventArgs e)
 		{
 			e.Handled = false;
-			if ((e.Event.Action == KeyEventActions.Down) && (e.KeyCode == Keycode.Enter))
+			if (e.ActionId == ImeAction.Send)
 			{
-				_sendButton.PerformClick();
+				SendMessage ();
 				e.Handled = true;
 			}
+		}
+
+		private AlertDialog CreateAlertDialog(string title, EventHandler<DialogClickEventArgs> updateHandler)
+		{
+			AlertDialog.Builder builder = new AlertDialog.Builder (this);
+
+			builder
+				.SetTitle (title)
+				.SetView (LayoutInflater.Inflate (Resource.Layout.SingleEditView, null))
+				.SetNegativeButton ("Cancel", handler: null)
+				.SetPositiveButton ("Update", handler: updateHandler);
+			return builder.Create ();
+		}
+
+		private void ServerPopUpClick(object sender, EventArgs e)
+		{
+			_serverAlertDialog.Show();
+			EditText editText = _serverAlertDialog.FindViewById<EditText>(Resource.Id.EditText1);
+			editText.Text = _serverHelper.ServerUrl;
+		}
+
+		private void UpdateServerClick (object sender, DialogClickEventArgs e)
+		{
+			EditText editText = _serverAlertDialog.FindViewById<EditText>(Resource.Id.EditText1);
+			if (!String.IsNullOrWhiteSpace (editText.Text)) 
+			{
+				_serverHelper.ServerUrl = editText.Text;
+				//_serverHelper.GetAsync ();
+			}
+		}
+
+		private void UserNamePopUpClick(object sender, EventArgs e)
+		{
+			_userNameAlertDialog.Show();
+			EditText editText = _userNameAlertDialog.FindViewById<EditText>(Resource.Id.EditText1);
+			editText.Text = _serverHelper.UserName;
+		}
+
+		private void UpdateUserNameClick (object sender, DialogClickEventArgs e)
+		{
+			EditText editText = _userNameAlertDialog.FindViewById<EditText>(Resource.Id.EditText1);
+			if (!String.IsNullOrWhiteSpace (editText.Text))
+				_serverHelper.UserName = editText.Text;
+			else
+				_userNameAlertDialog.SetMessage ("User name should't be empty");
 		}
 
 		public void PopulateView(List<String> messages)

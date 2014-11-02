@@ -7,6 +7,26 @@
     android:layout_height="match_parent"
     android:id="@+id/MainLayout">
     <LinearLayout
+        android:orientation="horizontal"
+        android:minWidth="25px"
+        android:minHeight="25px"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/Settings">
+        <Button
+            android:text="UserName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:id="@+id/UserNamePopUpButton" />
+        <Button
+            android:text="Server"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:id="@+id/ServerPopUpButton" />
+    </LinearLayout>
+    <LinearLayout
         android:orientation="vertical"
         android:id="@+id/MessagesLayout"
         android:layout_width="fill_parent"
@@ -37,7 +57,9 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:id="@+id/MessageField" />
+            android:id="@+id/MessageField"
+            android:inputType="text"
+            android:imeOptions="actionSend" />
         <Button
             android:text="Send"
             android:layout_width="wrap_content"

@@ -5,35 +5,53 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
+using System.IO;
 
 namespace Chat.Core
 {
 	public class ServerHelper
 	{
-		//private readonly string _serverUrl = "http://172.24.80.54:31337/";
-		private readonly string _defaultServerUrl = "http://192.168.137.1:31337/";
+		private readonly string _defaultServerUrl = "http://172.24.80.54:31337/";
 		private readonly string _getUrlTemplate = "{0}?token={1}";
 
 		private int _token;
 		private Action<List<string>> _populateView;
 
 		public string ServerUrl { get; set; }
+		public string UserName { get; set; }
 
 		public ServerHelper (Action<List<string>> populateView, string serverUrl = null)
 		{
 			_token = 0;
 			_populateView = populateView;
 			ServerUrl = serverUrl ?? _defaultServerUrl;
+			UserName = Guid.NewGuid ().ToString ().Substring (0, 8);
 		}
 
-		public async Task GetAsync ()
+		public async Task GetAsync()
 		{
-			string url = String.Format(_getUrlTemplate, ServerUrl, _token);
+			await Task.Run (() => Get());
+		}
+
+		public void Get ()
+		{
+			string url = String.Format (_getUrlTemplate, ServerUrl, _token);
 
 			WebRequest request = WebRequest.Create (url);
-			WebResponse response = await request.GetResponseAsync ();
+			WebResponse response = null;
+			try {
+				response = request.GetResponse ();
 
-			ParseResults (response);
+				ParseResults (response);
+
+			} catch (WebException ex) {
+				Console.WriteLine ("WebException in GetAsync: " + ex.Status);
+			}catch (Exception ex){
+				Console.WriteLine (ex.Message);
+			} finally {
+				if(response != null)
+					response.Close();
+			}
 
 			GetAsync ();
 		}
@@ -53,24 +71,42 @@ namespace Chat.Core
 			}
 		}
 
-		public async Task Post(string message)
+		public async Task PostAsync(string message)
 		{
-			_token++;
-			Task.Factory.StartNew(
-				() => _populateView(new List<string>{message}));
+			await Task.Run (() => Post (message));
+		}
+
+		public void Post(string message)
+		{
+			message = String.Format ("{0}: {1}", UserName, message);
 
 			WebRequest request = WebRequest.Create (ServerUrl);
 			request.Method = "POST";
 
-			using (var stream = request.GetRequestStream ()) 
-			{
+			Stream requestStream = null;
+			WebResponse response = null;
+			try {				
+				requestStream = request.GetRequestStream ();			
 				var jsonObj = new JsonPrimitive (message);
-				jsonObj.Save (stream);
+				jsonObj.Save (requestStream);
 
-				using (var response = request.GetResponse ()) 
-				{
-				}
+				response = request.GetResponse (); 
+
+				_populateView(new List<string>{message});
+				_token++;
+			} catch (WebException ex) {
+				Console.WriteLine ("WebException in PostAsync:" + ex.Status);
+			} catch (Exception ex) {
+				Console.WriteLine (ex.Message);			
+			} finally {
+				if (requestStream != null)
+					requestStream.Close ();
+
+				if (response != null)
+					response.Close ();
+					
 			}
+
 		}
 	}
 }
