@@ -20,6 +20,12 @@
             android:layout_weight="1"
             android:id="@+id/UserNamePopUpButton" />
         <Button
+            android:text="Room"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:id="@+id/RoomButton" />
+        <Button
             android:text="Server"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -28,43 +34,66 @@
     </LinearLayout>
     <LinearLayout
         android:orientation="vertical"
-        android:id="@+id/MessagesLayout"
-        android:layout_width="fill_parent"
+        android:minWidth="25px"
+        android:minHeight="25px"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/MainChatLayout">
+        <LinearLayout
+            android:orientation="vertical"
+            android:id="@+id/MessagesLayout"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:minWidth="200dp"
+            android:minHeight="200dp"
+            android:layout_weight="1"
+            android:layout_alignParentBottom="true">
+            <ListView
+                android:minWidth="25px"
+                android:minHeight="25px"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/MessagesList"
+                android:stackFromBottom="true"
+                android:transcriptMode="alwaysScroll" />
+        </LinearLayout>
+        <LinearLayout
+            android:orientation="horizontal"
+            android:minWidth="25px"
+            android:minHeight="25px"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/MessageFormLayout"
+            android:layout_alignParentBottom="true"
+            android:layout_weight="0">
+            <EditText
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:id="@+id/MessageField"
+                android:inputType="text"
+                android:imeOptions="actionSend" />
+            <Button
+                android:text="Send"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="0"
+                android:id="@+id/SendButton" />
+        </LinearLayout>
+    </LinearLayout>
+    <LinearLayout
+        android:orientation="vertical"
+        android:minWidth="25px"
+        android:minHeight="25px"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:minWidth="200dp"
-        android:minHeight="200dp"
-        android:layout_weight="1"
-        android:layout_alignParentBottom="true">
+        android:visibility="gone"
+        android:id="@+id/UsersLayout">
         <ListView
             android:minWidth="25px"
             android:minHeight="25px"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:id="@+id/MessagesList"
-            android:stackFromBottom="true"
-            android:transcriptMode="alwaysScroll" />
-    </LinearLayout>
-    <LinearLayout
-        android:orientation="horizontal"
-        android:minWidth="25px"
-        android:minHeight="25px"
-        android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
-        android:id="@+id/MessageFormLayout"
-        android:layout_alignParentBottom="true"
-        android:layout_weight="0">
-        <EditText
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:id="@+id/MessageField"
-            android:inputType="text"
-            android:imeOptions="actionSend" />
-        <Button
-            android:text="Send"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_weight="0"
-            android:id="@+id/SendButton" />
+            android:id="@+id/UsersListView" />
     </LinearLayout>
 </LinearLayout>

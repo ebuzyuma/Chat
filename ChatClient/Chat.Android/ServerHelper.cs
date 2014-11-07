@@ -27,6 +27,8 @@ namespace Chat.Core
 
 		public string UserName { get; set; }
 
+		public List<string> Users {	get{ return new List<string>{ "asdf", "asdf", "cvbcvb" }; }}
+
 		public ServerHelper (Action<List<string>> populateView, Action clearListView, Action<string> showInfo, string serverUrl = null)
 		{
 			_token = 0;

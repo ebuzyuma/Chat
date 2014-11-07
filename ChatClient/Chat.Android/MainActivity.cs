@@ -32,29 +32,69 @@ namespace Chat.Droid
 			base.OnCreate (bundle);
 			SetContentView (Resource.Layout.Main);
 
-			// Initialize list adapter
+			//initialize messages listview adapter
 			ListView list = FindViewById<ListView> (Resource.Id.MessagesList);
 			list.Adapter = new ArrayAdapter<string> (this, Android.Resource.Layout.SimpleListItem1);
 
+
+			_serverHelper = new ServerHelper (PopulateView, ClearListView, ShowInfoMessage);
+			_serverHelper.GetAsync ();
+
+
+			//handle messaging
 			Button sendButton = FindViewById<Button> (Resource.Id.SendButton);			
 			sendButton.Click += (sender, e) => SendMessage();;
 
 			_messageForm = FindViewById<EditText>(Resource.Id.MessageField);
 			_messageForm.EditorAction += HandleEnterClick;
 
-			_serverHelper = new ServerHelper (PopulateView, ClearListView, ShowInfoMessage);
-			_serverHelper.GetAsync ();
 
-			_serverAlertDialog = CreateAlertDialog ("Server", UpdateServerClick);
-			_userNameAlertDialog = CreateAlertDialog ("User Name", UpdateUserNameClick);
+			//settings buttons
+			_serverAlertDialog = CreateEditDialog ("Server", UpdateServerClick);
+			_userNameAlertDialog = CreateEditDialog ("User Name", UpdateUserNameClick);
 
 			Button serverPopUpButton = FindViewById<Button> (Resource.Id.ServerPopUpButton);			
 			serverPopUpButton.Click += ServerPopUpClick;
 
 			Button userNamePopUpButton = FindViewById<Button> (Resource.Id.UserNamePopUpButton);			
 			userNamePopUpButton.Click += UserNamePopUpClick;
+
+
+			//handle roombutton click
+			Button roomsButton = FindViewById<Button> (Resource.Id.RoomButton);
+			roomsButton.Click += (object sender, EventArgs e) => 
+			{
+				ToggleLayoutVisability(Resource.Id.MainChatLayout);
+				ToggleLayoutVisability(Resource.Id.UsersLayout);
+			};
+
+			//available users list view
+			// TODO get user list from somewhere
+			ListView usersList = FindViewById<ListView> (Resource.Id.UsersListView);
+			list.Adapter = new ArrayAdapter<string> (this, Android.Resource.Layout.SimpleListItem1, _serverHelper.Users);
+
+			usersList.ItemClick += (object sender, AdapterView.ItemClickEventArgs e) => 
+			{
+				roomsButton.CallOnClick();
+				TextView selectedItem = e.View as TextView;
+				if (selectedItem != null)
+					Toast.MakeText(this, selectedItem.Text, ToastLength.Long);
+			};
+
 		}
-			
+
+		private void ToggleLayoutVisability(int layoutId)
+		{
+			LinearLayout layout = FindViewById<LinearLayout>(layoutId);
+			if (layout != null) 
+			{
+				if (layout.Visibility == ViewStates.Visible)
+					layout.Visibility = ViewStates.Gone;
+				else
+					layout.Visibility = ViewStates.Visible;
+			}
+		}
+
 		private void SendMessage ()
 		{
 			if (!String.IsNullOrWhiteSpace(_messageForm.Text))
@@ -73,8 +113,8 @@ namespace Chat.Droid
 				e.Handled = true;
 			}
 		}
-
-		private AlertDialog CreateAlertDialog(string title, EventHandler<DialogClickEventArgs> updateHandler)
+			
+		private AlertDialog CreateEditDialog(string title, EventHandler<DialogClickEventArgs> updateHandler)
 		{
 			AlertDialog.Builder builder = new AlertDialog.Builder (this);
 
@@ -137,7 +177,7 @@ namespace Chat.Droid
 				Toast.MakeText(this, message, ToastLength.Long).Show();
 			});
 		}
-			
+
 	}
 }
 
