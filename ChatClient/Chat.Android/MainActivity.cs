@@ -42,7 +42,7 @@ namespace Chat.Droid
 			_messageForm = FindViewById<EditText>(Resource.Id.MessageField);
 			_messageForm.EditorAction += HandleEnterClick;
 
-			_serverHelper = new ServerHelper (PopulateView);
+			_serverHelper = new ServerHelper (PopulateView, ClearListView, ShowInfoMessage);
 			_serverHelper.GetAsync ();
 
 			_serverAlertDialog = CreateAlertDialog ("Server", UpdateServerClick);
@@ -96,11 +96,7 @@ namespace Chat.Droid
 		private void UpdateServerClick (object sender, DialogClickEventArgs e)
 		{
 			EditText editText = _serverAlertDialog.FindViewById<EditText>(Resource.Id.EditText1);
-			if (!String.IsNullOrWhiteSpace (editText.Text)) 
-			{
-				_serverHelper.ServerUrl = editText.Text;
-				//_serverHelper.GetAsync ();
-			}
+			_serverHelper.UpdateServerUrl (editText.Text);
 		}
 
 		private void UserNamePopUpClick(object sender, EventArgs e)
@@ -124,6 +120,21 @@ namespace Chat.Droid
 			RunOnUiThread (() => {
 				ListView list = FindViewById<ListView> (Resource.Id.MessagesList);
 				((ArrayAdapter)list.Adapter).AddAll (messages);
+			});
+		}
+
+		public void ClearListView()
+		{
+			RunOnUiThread (() => {
+				ListView list = FindViewById<ListView> (Resource.Id.MessagesList);
+				((ArrayAdapter)list.Adapter).Clear();
+			});
+		}
+
+		public void ShowInfoMessage(string message)
+		{
+			RunOnUiThread (() => {
+				Toast.MakeText(this, message, ToastLength.Long).Show();
 			});
 		}
 			

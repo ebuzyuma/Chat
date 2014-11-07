@@ -14,46 +14,81 @@ namespace Chat.Core
 		private readonly string _defaultServerUrl = "http://172.24.80.54:31337/";
 		private readonly string _getUrlTemplate = "{0}?token={1}";
 
+		private CancellationTokenSource _cancellationTokenSource;
 		private int _token;
-		private Action<List<string>> _populateView;
+		private string _serverUrl;
 
-		public string ServerUrl { get; set; }
+		public string ServerUrl { get{ return _serverUrl; } }
+
+
+		private Action<List<string>> _populateView;
+		private Action<string> _showInfo;
+		private Action _clearListView;
+
 		public string UserName { get; set; }
 
-		public ServerHelper (Action<List<string>> populateView, string serverUrl = null)
+		public ServerHelper (Action<List<string>> populateView, Action clearListView, Action<string> showInfo, string serverUrl = null)
 		{
 			_token = 0;
+			_cancellationTokenSource = new CancellationTokenSource ();
 			_populateView = populateView;
-			ServerUrl = serverUrl ?? _defaultServerUrl;
+			_clearListView = clearListView;
+			_showInfo = showInfo;
+
+			UpdateServerUrl (serverUrl ?? _defaultServerUrl);
+
 			UserName = Guid.NewGuid ().ToString ().Substring (0, 8);
 		}
 
-		public async Task GetAsync()
+		public void UpdateServerUrl (string url)
 		{
-			await Task.Run (() => Get());
-		}
+			_cancellationTokenSource.Cancel (); // for canceling all requests
+			_cancellationTokenSource = new CancellationTokenSource ();
 
-		public void Get ()
-		{
-			string url = String.Format (_getUrlTemplate, ServerUrl, _token);
-
-			WebRequest request = WebRequest.Create (url);
-			WebResponse response = null;
+			Uri newUri;
 			try {
-				response = request.GetResponse ();
+			
+				newUri = new Uri(url);
+				_serverUrl = newUri.ToString();
+				_clearListView();
+				_token = 0;
+				GetAsync ();
+
+			} catch (Exception ex) {
+				_showInfo("Incorrect url");
+				_serverUrl = url;
+			}
+		}
+			
+		public async Task GetAsync ()
+		{
+			string url = String.Format (_getUrlTemplate, _serverUrl, _token);
+
+			HttpWebRequest request = WebRequest.CreateHttp (url);
+			HttpWebResponse response = null;
+			try {
+				response = (HttpWebResponse) await request.GetResponseAsync (_cancellationTokenSource.Token);
 
 				ParseResults (response);
 
 			} catch (WebException ex) {
 				Console.WriteLine ("WebException in GetAsync: " + ex.Status);
-			}catch (Exception ex){
+				switch (ex.Status) 
+				{ 
+					case WebExceptionStatus.ConnectFailure:
+						_showInfo ("Connection to the server failed");
+						break;
+					case WebExceptionStatus.Timeout:
+						GetAsync ();
+						break;
+				}
+			} catch (Exception ex){
 				Console.WriteLine (ex.Message);
 			} finally {
 				if(response != null)
 					response.Close();
 			}
 
-			GetAsync ();
 		}
 
 		private void ParseResults (WebResponse response)
@@ -73,29 +108,26 @@ namespace Chat.Core
 
 		public async Task PostAsync(string message)
 		{
-			await Task.Run (() => Post (message));
-		}
-
-		public void Post(string message)
-		{
 			message = String.Format ("{0}: {1}", UserName, message);
 
-			WebRequest request = WebRequest.Create (ServerUrl);
+			_populateView(new List<string>{message});
+			_token++;
+
+			HttpWebRequest request = WebRequest.CreateHttp (_serverUrl);
 			request.Method = "POST";
 
 			Stream requestStream = null;
-			WebResponse response = null;
+			HttpWebResponse response = null;
 			try {				
-				requestStream = request.GetRequestStream ();			
+				requestStream = await request.GetRequestStreamAsync ();			
 				var jsonObj = new JsonPrimitive (message);
 				jsonObj.Save (requestStream);
 
-				response = request.GetResponse (); 
+				response = await request.GetResponseAsync (_cancellationTokenSource.Token); 
 
-				_populateView(new List<string>{message});
-				_token++;
 			} catch (WebException ex) {
 				Console.WriteLine ("WebException in PostAsync:" + ex.Status);
+				_showInfo ("Post to the server failed");
 			} catch (Exception ex) {
 				Console.WriteLine (ex.Message);			
 			} finally {
