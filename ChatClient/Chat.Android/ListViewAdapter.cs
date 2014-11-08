@@ -19,9 +19,13 @@ namespace Chat.Droid
 			_arrayAdapter = arrayAdapter;
 		}
 
+		public void Add(string obj)
+		{
+			_activity.RunOnUiThread(() => _arrayAdapter.Add (obj));
+		}
+
 		public void AddAll(ICollection collection)
 		{
-
 			_activity.RunOnUiThread(() => _arrayAdapter.AddAll (collection));
 		}
 

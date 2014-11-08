@@ -6,6 +6,7 @@ namespace Chat.Core
 {
 	public interface IListViewAdapter
 	{
+		void Add (string obj);
 		void AddAll(ICollection collection);
 		void Clear ();
 	}

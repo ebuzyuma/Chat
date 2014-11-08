@@ -34,11 +34,13 @@ namespace Chat.Core
 
 				IEnumerable<Message> messagesToShow;
 				if (value == "Common") {
-					messagesToShow = Messages.Where (p => !p.IsPrivate);
+					messagesToShow = Messages.Where (p => p.To == String.Empty);
 					_currentRoom = String.Empty;
 				} else {
 					_currentRoom = value;
-					messagesToShow = Messages.Where (p => p.From == value && p.IsPrivate);
+					messagesToShow = Messages.Where (p => 
+						(p.From == value && p.To != String.Empty) //messages to you
+						|| p.From == String.Empty && p.To == value); //your messages to user
 				}
 				_messagesViewAdapter.AddAll(messagesToShow.Select (p => p.ToString()).ToList());
 			} 
@@ -113,22 +115,29 @@ namespace Chat.Core
 			
 		public void Send (string text)
 		{
+			var message = new Message (String.Empty, CurrentRoom, text);
+			_messagesViewAdapter.Add (message.ToString());
+			Messages.Add (message);
+			ServerHelper.Token++;
 			ServerHelper.PostAsync (String.Join (":", "message", UserName, CurrentRoom, text));
 		}
 
 		private void AddMessages(List<string[]> messages)
 		{
-			var messagesForCurrentUser = messages.Where(p => p[2] == UserName || String.IsNullOrEmpty(p[2]));
-			var messagesToAdd = messagesForCurrentUser
+			var currentUserMessages = messages.Where(
+				p => p[2] == UserName // private messages 
+				|| String.IsNullOrEmpty(p[2]) // common messages
+			);
+			var messagesToAdd = currentUserMessages
 				.Select (p => new Message (p));
 
 			Messages.AddRange (messagesToAdd);
 
 			IEnumerable<Message> messagesToShow;
 			if (CurrentRoom == String.Empty)
-				messagesToShow = messagesToAdd.Where (p => !p.IsPrivate);
+				messagesToShow = messagesToAdd.Where (p => p.To == String.Empty);
 			else
-				messagesToShow = messagesToAdd.Where (p => p.IsPrivate && p.From == CurrentRoom);
+				messagesToShow = messagesToAdd.Where (p => p.From == CurrentRoom && p.To != String.Empty);
 
 			_messagesViewAdapter.AddAll(messagesToShow.Select(p => p.ToString()).ToList());
 		}
