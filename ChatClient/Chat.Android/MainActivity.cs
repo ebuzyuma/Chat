@@ -20,9 +20,7 @@ namespace Chat.Droid
 	[Activity (Label = "Chat", MainLauncher = true, Icon = "@drawable/icon")]
 	public class MainActivity : Activity
 	{
-		private ServerHelper _serverHelper;
-
-		private EditText _messageForm;
+		private MessageManager _messageManager;
 
 		private AlertDialog _serverAlertDialog;
 		private AlertDialog _userNameAlertDialog;
@@ -32,79 +30,45 @@ namespace Chat.Droid
 			base.OnCreate (bundle);
 			SetContentView (Resource.Layout.Main);
 
-			//initialize messages listview adapter
-			ListView list = FindViewById<ListView> (Resource.Id.MessagesList);
-			list.Adapter = new ArrayAdapter<string> (this, Android.Resource.Layout.SimpleListItem1);
+			var messagesAdapter = InitializeMessagesListView ();
+			InitializeMessageForm ();
+			InitializeServerPopUp ();
+			InitializeUserNamePopUp ();
+			var usersAdapter = InitializeRoomHandlers ();
 
-
-			_serverHelper = new ServerHelper (PopulateView, ClearListView, ShowInfoMessage);
-			_serverHelper.GetAsync ();
-
-
-			//handle messaging
-			Button sendButton = FindViewById<Button> (Resource.Id.SendButton);			
-			sendButton.Click += (sender, e) => SendMessage();;
-
-			_messageForm = FindViewById<EditText>(Resource.Id.MessageField);
-			_messageForm.EditorAction += HandleEnterClick;
-
-
-			//settings buttons
-			_serverAlertDialog = CreateEditDialog ("Server", UpdateServerClick);
-			_userNameAlertDialog = CreateEditDialog ("User Name", UpdateUserNameClick);
-
-			Button serverPopUpButton = FindViewById<Button> (Resource.Id.ServerPopUpButton);			
-			serverPopUpButton.Click += ServerPopUpClick;
-
-			Button userNamePopUpButton = FindViewById<Button> (Resource.Id.UserNamePopUpButton);			
-			userNamePopUpButton.Click += UserNamePopUpClick;
-
-
-			//handle roombutton click
-			Button roomsButton = FindViewById<Button> (Resource.Id.RoomButton);
-			roomsButton.Click += (object sender, EventArgs e) => 
-			{
-				ToggleLayoutVisability(Resource.Id.MainChatLayout);
-				ToggleLayoutVisability(Resource.Id.UsersLayout);
-			};
-
-			//available users list view
-			// TODO get user list from somewhere
-			ListView usersList = FindViewById<ListView> (Resource.Id.UsersListView);
-			list.Adapter = new ArrayAdapter<string> (this, Android.Resource.Layout.SimpleListItem1, _serverHelper.Users);
-
-			usersList.ItemClick += (object sender, AdapterView.ItemClickEventArgs e) => 
-			{
-				roomsButton.CallOnClick();
-				TextView selectedItem = e.View as TextView;
-				if (selectedItem != null)
-					Toast.MakeText(this, selectedItem.Text, ToastLength.Long);
-			};
-
+			_messageManager = new MessageManager (messagesAdapter, usersAdapter, ShowInfoMessage);
+			_messageManager.JoinChat ();
 		}
 
-		private void ToggleLayoutVisability(int layoutId)
+		private ListViewAdapter InitializeMessagesListView ()
 		{
-			LinearLayout layout = FindViewById<LinearLayout>(layoutId);
-			if (layout != null) 
-			{
-				if (layout.Visibility == ViewStates.Visible)
-					layout.Visibility = ViewStates.Gone;
-				else
-					layout.Visibility = ViewStates.Visible;
-			}
+			ListView list = FindViewById<ListView> (Resource.Id.MessagesList);
+			var messagesArrayAdapter = new ArrayAdapter<string> (this, Android.Resource.Layout.SimpleListItem1);
+			list.Adapter = messagesArrayAdapter;
+
+			return new ListViewAdapter (messagesArrayAdapter, this);
+		}
+
+		private void InitializeMessageForm ()
+		{
+			Button sendButton = FindViewById<Button> (Resource.Id.SendButton);
+			sendButton.Click += (sender, e) => SendMessage ();
+
+			EditText messageInput = FindViewById<EditText> (Resource.Id.MessageField);
+			messageInput.EditorAction += HandleSendClick;
 		}
 
 		private void SendMessage ()
 		{
-			if (!String.IsNullOrWhiteSpace(_messageForm.Text))
+			EditText messageInput = FindViewById<EditText> (Resource.Id.MessageField);
+			if (!String.IsNullOrWhiteSpace(messageInput.Text))
 			{
-				_serverHelper.PostAsync(_messageForm.Text);
-				_messageForm.Text = String.Empty;
+				_messageManager.Send(messageInput.Text);
+				messageInput.Text = String.Empty;
 			}
 		}
 
-		private void HandleEnterClick(object sender, TextView.EditorActionEventArgs e)
+		private void HandleSendClick(object sender, TextView.EditorActionEventArgs e)
 		{
 			e.Handled = false;
 			if (e.ActionId == ImeAction.Send)
@@ -113,7 +77,14 @@ namespace Chat.Droid
 				e.Handled = true;
 			}
 		}
-			
+
+		private void InitializeServerPopUp ()
+		{
+			_serverAlertDialog = CreateEditDialog ("Server", UpdateServerClick);
+			Button serverPopUpButton = FindViewById<Button> (Resource.Id.ServerPopUpButton);
+			serverPopUpButton.Click += ServerPopUpClick;
+		}
+
 		private AlertDialog CreateEditDialog(string title, EventHandler<DialogClickEventArgs> updateHandler)
 		{
 			AlertDialog.Builder builder = new AlertDialog.Builder (this);
@@ -130,45 +101,74 @@ namespace Chat.Droid
 		{
 			_serverAlertDialog.Show();
 			EditText editText = _serverAlertDialog.FindViewById<EditText>(Resource.Id.EditText1);
-			editText.Text = _serverHelper.ServerUrl;
+			editText.Text = _messageManager.ServerHelper.ServerUrl;
 		}
 
 		private void UpdateServerClick (object sender, DialogClickEventArgs e)
 		{
 			EditText editText = _serverAlertDialog.FindViewById<EditText>(Resource.Id.EditText1);
-			_serverHelper.UpdateServerUrl (editText.Text);
+			_messageManager.ServerHelper.ServerUrl = editText.Text;
+			_messageManager.Reset ();
+			_messageManager.JoinChat ();
+		}
+
+		private void InitializeUserNamePopUp ()
+		{
+			_userNameAlertDialog = CreateEditDialog ("User Name", UpdateUserNameClick);
+			Button userNamePopUpButton = FindViewById<Button> (Resource.Id.UserNamePopUpButton);
+			userNamePopUpButton.Click += UserNamePopUpClick;
 		}
 
 		private void UserNamePopUpClick(object sender, EventArgs e)
 		{
 			_userNameAlertDialog.Show();
 			EditText editText = _userNameAlertDialog.FindViewById<EditText>(Resource.Id.EditText1);
-			editText.Text = _serverHelper.UserName;
+			editText.Text = _messageManager.UserName;
 		}
 
 		private void UpdateUserNameClick (object sender, DialogClickEventArgs e)
 		{
 			EditText editText = _userNameAlertDialog.FindViewById<EditText>(Resource.Id.EditText1);
 			if (!String.IsNullOrWhiteSpace (editText.Text))
-				_serverHelper.UserName = editText.Text;
+				_messageManager.UserName = editText.Text;
 			else
 				_userNameAlertDialog.SetMessage ("User name should't be empty");
 		}
 
-		public void PopulateView(List<String> messages)
+		private ListViewAdapter InitializeRoomHandlers ()
 		{
-			RunOnUiThread (() => {
-				ListView list = FindViewById<ListView> (Resource.Id.MessagesList);
-				((ArrayAdapter)list.Adapter).AddAll (messages);
-			});
+			//handle roombutton click
+			Button roomsButton = FindViewById<Button> (Resource.Id.RoomButton);
+			roomsButton.Click += (object sender, EventArgs e) =>  {
+				ToggleLayoutVisability (Resource.Id.MainChatLayout);
+				ToggleLayoutVisability (Resource.Id.UsersLayout);
+			};
+
+			var userArrayAdapter = new ArrayAdapter<string> (this, Android.Resource.Layout.SimpleListItem1);
+			ListView usersList = FindViewById<ListView> (Resource.Id.UsersListView);
+			usersList.Adapter = userArrayAdapter;
+			usersList.ItemClick += (object sender, AdapterView.ItemClickEventArgs e) =>  {
+				roomsButton.CallOnClick ();
+				TextView selectedItem = e.View as TextView;
+				if (selectedItem != null)
+					_messageManager.CurrentRoom = selectedItem.Text;
+			};
+
+			return new ListViewAdapter (userArrayAdapter, this);
 		}
 
-		public void ClearListView()
+		private void ToggleLayoutVisability(int layoutId)
 		{
-			RunOnUiThread (() => {
-				ListView list = FindViewById<ListView> (Resource.Id.MessagesList);
-				((ArrayAdapter)list.Adapter).Clear();
-			});
+			LinearLayout layout = FindViewById<LinearLayout>(layoutId);
+			if (layout != null) {
+				if (layout.Visibility == ViewStates.Visible) {
+					layout.Visibility = ViewStates.Gone;
+					layout.ClearFocus ();
+				} else {
+					layout.Visibility = ViewStates.Visible;
+					layout.RequestFocus ();
+				}
+			}
 		}
 
 		public void ShowInfoMessage(string message)

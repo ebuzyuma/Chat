@@ -50,6 +50,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerHelper.cs" />
     <Compile Include="Extentions.cs" />
+    <Compile Include="MessageManager.cs" />
+    <Compile Include="Message.cs" />
+    <Compile Include="ListViewAdapter.cs" />
+    <Compile Include="IListViewAdapter.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\AboutResources.txt" />
