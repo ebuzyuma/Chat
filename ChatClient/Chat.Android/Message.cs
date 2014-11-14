@@ -14,7 +14,7 @@ namespace Chat.Core
 
 		//{"message", from, to, body} 
 		//to empty when message is broadcast
-		//frrom empty when it is your message
+		//from empty when it is your message
 		public Message (string[] arrayMessage) 
 			: this(arrayMessage[1], arrayMessage[2], arrayMessage[3])
 		{

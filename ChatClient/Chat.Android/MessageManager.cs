@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Json;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Chat.Core
 {
@@ -13,11 +14,6 @@ namespace Chat.Core
 
 		//to add new user
 		//user:userName
-		//each one who online should responce with
-		//online:userName
-
-		//to update user name
-		//update:oldName:newName
 
 		public string UserName { get; set; }
 		public List<string> Users { get; set;	}
@@ -58,7 +54,7 @@ namespace Chat.Core
 			Users = new List<string> {"Common"};
 			_usersViewAdapter.AddAll (Users);
 			//UserName = Guid.NewGuid ().ToString ().Substring (0, 8);
-			UserName = "mob"; // just for testing
+			UserName = "nexus"; // just for testing
 			_currentRoom = String.Empty;
 
 			ServerHelper = new ServerHelper (showInfo, GetResponseCallback);
@@ -101,18 +97,13 @@ namespace Chat.Core
 						case "update":
 							break;
 						case "user":
-							Users.AddRange (group.Select (p => p [1]).ToList ());
-							_usersViewAdapter.AddAll (group.Select (p => p [1]).ToList ());
-							break;
-						case "online":
-							Users.Union (group.Select(p => p[1]).ToList ());
+							AddUsers (group.Select (p => p [1]).ToList ());
 							break;
 					}				
 				}					
 			}
 		}
-
-			
+							
 		public void Send (string text)
 		{
 			var message = new Message (String.Empty, CurrentRoom, text);
@@ -142,8 +133,15 @@ namespace Chat.Core
 			_messagesViewAdapter.AddAll(messagesToShow.Select(p => p.ToString()).ToList());
 		}
 
-		public void JoinChat ()
+		public void AddUsers(List<string> users) 
 		{
+			users.Remove (UserName);
+			Users.AddRange (users);
+			_usersViewAdapter.AddAll (users);
+		}
+		public async Task JoinChatAsync ()
+		{
+			await ServerHelper.PostAsync (String.Join(":", "user", UserName));
 			ServerHelper.GetAsync ();
 		}
 	}

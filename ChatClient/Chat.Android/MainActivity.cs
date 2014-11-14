@@ -37,7 +37,7 @@ namespace Chat.Droid
 			var usersAdapter = InitializeRoomHandlers ();
 
 			_messageManager = new MessageManager (messagesAdapter, usersAdapter, ShowInfoMessage);
-			_messageManager.JoinChat ();
+			_messageManager.JoinChatAsync ();
 		}
 
 		private ListViewAdapter InitializeMessagesListView ()
@@ -109,7 +109,7 @@ namespace Chat.Droid
 			EditText editText = _serverAlertDialog.FindViewById<EditText>(Resource.Id.EditText1);
 			_messageManager.ServerHelper.ServerUrl = editText.Text;
 			_messageManager.Reset ();
-			_messageManager.JoinChat ();
+			_messageManager.JoinChatAsync ();
 		}
 
 		private void InitializeUserNamePopUp ()
