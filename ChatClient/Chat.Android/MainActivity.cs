@@ -178,6 +178,11 @@ namespace Chat.Droid
 			});
 		}
 
+		protected override void OnDestroy ()
+		{
+			base.OnDestroy ();
+			_messageManager.LeaveChat ();
+		}
 	}
 }
 

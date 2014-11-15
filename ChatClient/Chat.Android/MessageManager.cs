@@ -15,6 +15,9 @@ namespace Chat.Core
 		//to add new user
 		//user:userName
 
+		//to leave chat
+		//leave:userName
+
 		public string UserName { get; set; }
 		public List<string> Users { get; set;	}
 		public List<Message> Messages { get; private set; }
@@ -54,7 +57,7 @@ namespace Chat.Core
 			Users = new List<string> {"Common"};
 			_usersViewAdapter.AddAll (Users);
 			//UserName = Guid.NewGuid ().ToString ().Substring (0, 8);
-			UserName = "nexus"; // just for testing
+			UserName = "mob"; // just for testing
 			_currentRoom = String.Empty;
 
 			ServerHelper = new ServerHelper (showInfo, GetResponseCallback);
@@ -94,10 +97,11 @@ namespace Chat.Core
 						case "message":
 							AddMessages(group.ToList());
 							break;
-						case "update":
-							break;
 						case "user":
 							AddUsers (group.Select (p => p [1]).ToList ());
+							break;
+						case "leave":
+							RemoveUsers (group.Select(p => p[1]).ToList());
 							break;
 					}				
 				}					
@@ -139,10 +143,25 @@ namespace Chat.Core
 			Users.AddRange (users);
 			_usersViewAdapter.AddAll (users);
 		}
+
+		private void RemoveUsers (List<string> usersToRemove)
+		{
+			usersToRemove.ForEach (p => 
+				{ 
+					Users.Remove (p); 
+					_usersViewAdapter.Remove(p); 
+				});
+		}
+
 		public async Task JoinChatAsync ()
 		{
 			await ServerHelper.PostAsync (String.Join(":", "user", UserName));
 			ServerHelper.GetAsync ();
+		}
+
+		public void LeaveChat ()
+		{
+			ServerHelper.PostAsync (String.Join (":", "leave", UserName));
 		}
 	}
 }

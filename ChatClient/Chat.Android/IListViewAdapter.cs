@@ -8,6 +8,7 @@ namespace Chat.Core
 	{
 		void Add (string obj);
 		void AddAll(ICollection collection);
+		void Remove (string obj);
 		void Clear ();
 	}
 }

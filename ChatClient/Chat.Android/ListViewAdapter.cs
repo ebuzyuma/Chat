@@ -29,6 +29,11 @@ namespace Chat.Droid
 			_activity.RunOnUiThread(() => _arrayAdapter.AddAll (collection));
 		}
 
+		public void Remove(string obj)
+		{
+			_activity.RunOnUiThread (() => _arrayAdapter.Remove (obj));
+		}
+
 		public void Clear()
 		{
 			_activity.RunOnUiThread(() =>_arrayAdapter.Clear ());
