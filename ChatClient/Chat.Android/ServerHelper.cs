@@ -11,7 +11,7 @@ namespace Chat.Core
 {
 	public class ServerHelper
 	{
-		private readonly string _defaultServerUrl = "http://172.24.80.54:31337/";
+		private readonly string _defaultServerUrl = "http://192.168.1.150:31337/";
 		private readonly string _getUrlTemplate = "{0}?token={1}";
 
 		private CancellationTokenSource _cancellationTokenSource;
@@ -29,6 +29,7 @@ namespace Chat.Core
 				{			
 					Uri newUri = new Uri (value);
 					_serverUrl = newUri.ToString ();
+					Token = 0; // reset token when url updated
 				} 
 				catch (Exception ex) 
 				{
@@ -102,6 +103,7 @@ namespace Chat.Core
 				var jsonObj = new JsonPrimitive (message);
 				jsonObj.Save (requestStream);
 
+				Token++;
 				response = await request.GetResponseAsync (_cancellationTokenSource.Token); 
 
 			} 

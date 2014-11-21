@@ -10,7 +10,7 @@ namespace Chat.Core
 	public class MessageManager
 	{
 		//typical message
-		//message:from:to:messageBody
+		//message:id:from:to:messageBody
 
 		//to add new user
 		//user:userName
@@ -18,10 +18,13 @@ namespace Chat.Core
 		//to leave chat
 		//leave:userName
 
-		public string UserName { get; set; }
-		public List<string> Users { get; set;	}
-		public List<Message> Messages { get; private set; }
-		public ServerHelper ServerHelper { get; private set; }
+		//for updating
+		//update:message:id:body
+
+		private List<Message> _allMessages;
+
+		private IListViewAdapter<Message> _messagesViewAdapter;
+		private IListViewAdapter<User> _usersViewAdapter;
 
 		private string _currentRoom;
 		public string CurrentRoom 
@@ -31,49 +34,59 @@ namespace Chat.Core
 			{
 				_messagesViewAdapter.Clear();
 
-				IEnumerable<Message> messagesToShow;
-				if (value == "Common") {
-					messagesToShow = Messages.Where (p => p.To == String.Empty);
-					_currentRoom = String.Empty;
-				} else {
-					_currentRoom = value;
-					messagesToShow = Messages.Where (p => 
-						(p.From == value && p.To != String.Empty) //messages to you
-						|| p.From == String.Empty && p.To == value); //your messages to user
-				}
-				_messagesViewAdapter.AddAll(messagesToShow.Select (p => p.ToString()).ToList());
+				_currentRoom = value == "Common"? String.Empty : value;
+
+				var messagesToShow = _allMessages.Where (p => 
+					(_currentRoom == String.Empty ? p.To == String.Empty : p.From == _currentRoom && p.To == UserName) //messages to you
+					|| p.From == String.Empty && p.To == _currentRoom); //your messages to user
+
+				_messagesViewAdapter.AddAll(messagesToShow.ToList());
 			} 
 		}
 
-		private IListViewAdapter _messagesViewAdapter;
-		private IListViewAdapter _usersViewAdapter;
+		public Message LastMessage 
+		{
+			get 
+			{
+				return _messagesViewAdapter.Data.Last (p => p.From == String.Empty);
+			}
+		}
 
-		public MessageManager (IListViewAdapter messagesViewAdapter, IListViewAdapter usersViewAdapter, Action<string> showInfo)
+		public string UserName { get; set; }
+
+		public ServerHelper ServerHelper { get; private set; }
+
+		public MessageManager (IListViewAdapter<Message> messagesViewAdapter, IListViewAdapter<User> usersViewAdapter, Action<string> showInfo)
 		{
 			_messagesViewAdapter = messagesViewAdapter;
-			_usersViewAdapter = usersViewAdapter;
 
-			Messages = new List<Message> ();
-			Users = new List<string> {"Common"};
-			_usersViewAdapter.AddAll (Users);
-			//UserName = Guid.NewGuid ().ToString ().Substring (0, 8);
-			UserName = "mob"; // just for testing
+			_usersViewAdapter = usersViewAdapter;
+			_usersViewAdapter.Add (new User("Common"));
+
+			_allMessages = new List<Message> ();
+
+			UserName = Guid.NewGuid ().ToString ().Substring (0, 8);
+			//UserName = "mob"; // just for testing
+
 			_currentRoom = String.Empty;
 
 			ServerHelper = new ServerHelper (showInfo, GetResponseCallback);
 		}
 
+		public void UpdateLastMessage(string messageBody)
+		{
+			LastMessage.Body = messageBody;
+			_messagesViewAdapter.Update (LastMessage); 
+			ServerHelper.PostAsync (LastMessage.ToServerUpdateString());
+		}
+
 		public void Reset ()
 		{
 			_messagesViewAdapter.Clear();
-			Messages.Clear ();
-
-			ServerHelper.Token = 0;
+			_allMessages.Clear ();
 
 			_usersViewAdapter.Clear ();
-			Users.Clear ();
-			Users.Add ("Common");
-			_usersViewAdapter.AddAll (Users);
+			_usersViewAdapter.Add (new User("Common"));
 		}
 
 		public void GetResponseCallback (HttpWebResponse response)
@@ -97,6 +110,9 @@ namespace Chat.Core
 						case "message":
 							AddMessages(group.ToList());
 							break;
+						case "update":
+							UpdateFromServer (group.GroupBy(p => p[1]));
+							break;
 						case "user":
 							AddUsers (group.Select (p => p [1]).ToList ());
 							break;
@@ -110,37 +126,36 @@ namespace Chat.Core
 							
 		public void Send (string text)
 		{
-			var message = new Message (String.Empty, CurrentRoom, text);
-			_messagesViewAdapter.Add (message.ToString());
-			Messages.Add (message);
-			ServerHelper.Token++;
-			ServerHelper.PostAsync (String.Join (":", "message", UserName, CurrentRoom, text));
+			var message = new Message (ServerHelper.Token, String.Empty, CurrentRoom, text);
+			_messagesViewAdapter.Add (message);
+			_allMessages.Add (message);
+
+			ServerHelper.PostAsync (message.ToServerPostString(UserName));
 		}
 
 		private void AddMessages(List<string[]> messages)
 		{
 			var currentUserMessages = messages.Where(
-				p => p[2] == UserName // private messages 
-				|| String.IsNullOrEmpty(p[2]) // common messages
+				p => p[3] == UserName // private messages 
+				|| p[3] == String.Empty // common messages 
 			);
 			var messagesToAdd = currentUserMessages
 				.Select (p => new Message (p));
 
-			Messages.AddRange (messagesToAdd);
+			_allMessages.AddRange (messagesToAdd);
 
 			IEnumerable<Message> messagesToShow;
 			if (CurrentRoom == String.Empty)
 				messagesToShow = messagesToAdd.Where (p => p.To == String.Empty);
 			else
-				messagesToShow = messagesToAdd.Where (p => p.From == CurrentRoom && p.To != String.Empty);
+				messagesToShow = messagesToAdd.Where (p => p.From == CurrentRoom && p.To == UserName);
 
-			_messagesViewAdapter.AddAll(messagesToShow.Select(p => p.ToString()).ToList());
+			_messagesViewAdapter.AddAll(messagesToShow.ToList());
 		}
 
 		public void AddUsers(List<string> users) 
 		{
-			users.Remove (UserName);
-			Users.AddRange (users);
+			//users.Remove (UserName);
 			_usersViewAdapter.AddAll (users);
 		}
 
@@ -148,9 +163,28 @@ namespace Chat.Core
 		{
 			usersToRemove.ForEach (p => 
 				{ 
-					Users.Remove (p); 
-					_usersViewAdapter.Remove(p); 
+					var user = new User(p);
+					_usersViewAdapter.Remove(user); 
 				});
+		}
+
+		private void UpdateFromServer (IEnumerable<IGrouping<string, string[]>> groups)
+		{
+			foreach (IGrouping<string, string[]> items in groups) {
+				if (items.Key == "message") 
+				{
+					foreach (string[] messageSplited in items) {
+						var message = _allMessages.FirstOrDefault (p => p.Id.ToString() == messageSplited [2]);
+						if (message != null) {
+							message.Body = messageSplited [3];
+							_messagesViewAdapter.Update (message);
+						}
+					}
+				} 
+				else 
+				{
+				}
+			}
 		}
 
 		public async Task JoinChatAsync ()

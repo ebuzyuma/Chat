@@ -4,11 +4,14 @@ using System.Collections;
 
 namespace Chat.Core
 {
-	public interface IListViewAdapter
+	public interface IListViewAdapter<T> where T : IItemViewModel
 	{
-		void Add (string obj);
+		List<T> Data { get; set; } 
+
+		void Add (T obj);
 		void AddAll(ICollection collection);
-		void Remove (string obj);
+		void Update (T obj);
+		void Remove (T obj);
 		void Clear ();
 	}
 }

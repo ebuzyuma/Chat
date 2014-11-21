@@ -4,39 +4,57 @@ using System.Collections.Generic;
 using Chat.Core;
 using Android.App;
 using System.Collections;
+using Android.Content;
+using System.Linq;
 
 namespace Chat.Droid
 {
-	//TODO add generic type instead of string if needed
-	public class ListViewAdapter : IListViewAdapter
+	public sealed class ListViewAdapter<T> : ArrayAdapter<T>, IListViewAdapter<T> 
+		where T : class, IItemViewModel
 	{
-		private ArrayAdapter<string> _arrayAdapter; 
-		private Activity _activity;
+		public List<T> Data { get; set; } 
 
-		public ListViewAdapter (ArrayAdapter<string> arrayAdapter, Activity activity)
+		public ListViewAdapter (Context context, int textViewResourceId, List<T> objects) : base (context, textViewResourceId, objects)
 		{
-			_activity = activity;
-			_arrayAdapter = arrayAdapter;
+			Data = objects;
+			SetNotifyOnChange (true);
+		}		
+
+		public ListViewAdapter (Context context, int textViewResourceId) : this (context, textViewResourceId, new List<T>())
+		{
+		}
+		
+
+		public new void Add(T obj)
+		{
+			base.Add (obj);
+			Data.Add (obj);
 		}
 
-		public void Add(string obj)
+		public override void AddAll(ICollection collection)
 		{
-			_activity.RunOnUiThread(() => _arrayAdapter.Add (obj));
+			base.AddAll (collection);
+			Data.AddRange (collection.OfType<T>());
 		}
 
-		public void AddAll(ICollection collection)
+		public void Update (T obj)
 		{
-			_activity.RunOnUiThread(() => _arrayAdapter.AddAll (collection));
+			T item = Data.FirstOrDefault (p => p.Id == obj.Id);
+			if (!item.Equals(default(T)))
+				item.MapFrom (obj);
+			NotifyDataSetChanged ();
 		}
 
-		public void Remove(string obj)
+		public new void Remove(T obj)
 		{
-			_activity.RunOnUiThread (() => _arrayAdapter.Remove (obj));
+			base.Remove (obj);
+			Data.Remove (obj);
 		}
 
-		public void Clear()
+		public override void Clear()
 		{
-			_activity.RunOnUiThread(() =>_arrayAdapter.Clear ());
+			base.Clear();
+			Data.Clear();
 		}
 	}
 }

@@ -54,6 +54,8 @@
     <Compile Include="Message.cs" />
     <Compile Include="ListViewAdapter.cs" />
     <Compile Include="IListViewAdapter.cs" />
+    <Compile Include="User.cs" />
+    <Compile Include="IItemViewModel.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\AboutResources.txt" />

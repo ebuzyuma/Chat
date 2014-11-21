@@ -25,9 +25,9 @@ namespace Chat.Droid
 		private AlertDialog _serverAlertDialog;
 		private AlertDialog _userNameAlertDialog;
 
-		protected override void OnCreate (Bundle bundle)
+		protected override void OnCreate (Bundle savedInstanceState)
 		{
-			base.OnCreate (bundle);
+			base.OnCreate (savedInstanceState);
 			SetContentView (Resource.Layout.Main);
 
 			var messagesAdapter = InitializeMessagesListView ();
@@ -40,22 +40,50 @@ namespace Chat.Droid
 			_messageManager.JoinChatAsync ();
 		}
 
-		private ListViewAdapter InitializeMessagesListView ()
+		private ListViewAdapter<Chat.Core.Message> InitializeMessagesListView ()
 		{
 			ListView list = FindViewById<ListView> (Resource.Id.MessagesList);
-			var messagesArrayAdapter = new ArrayAdapter<string> (this, Android.Resource.Layout.SimpleListItem1);
-			list.Adapter = messagesArrayAdapter;
 
-			return new ListViewAdapter (messagesArrayAdapter, this);
+			list.ItemLongClick += (object sender, AdapterView.ItemLongClickEventArgs e) => 
+			{
+				var textView = (TextView) e.View;
+				string[] splited = textView.Text.Split(':');
+				var adapter = (ArrayAdapter<Chat.Core.Message>) ((ListView) sender).Adapter;
+				var message = adapter.GetItem(e.Position);
+				if (splited[0] == "You" && message.Id == _messageManager.LastMessage.Id)
+				{
+					UpdateEditView("Update", splited[1].Trim(), ImeAction.Done);
+				}
+			};
+
+			var messagesAdapter = new ListViewAdapter<Chat.Core.Message> (this, Android.Resource.Layout.SimpleListItem1);
+			list.Adapter = messagesAdapter;
+
+			return messagesAdapter;
 		}
 
 		private void InitializeMessageForm ()
 		{
-			Button sendButton = FindViewById<Button> (Resource.Id.SendButton);
-			sendButton.Click += (sender, e) => SendMessage ();
-
 			EditText messageInput = FindViewById<EditText> (Resource.Id.MessageField);
-			messageInput.EditorAction += HandleSendClick;
+			messageInput.EditorAction += HandleInputActionClick;
+
+			Button sendButton = FindViewById<Button> (Resource.Id.SendButton);
+			sendButton.Click += (sender, e) => 
+			{
+				if (!String.IsNullOrEmpty(messageInput.Text) )
+				{
+					if(	sendButton.Text == "Update")
+					{	
+						_messageManager.UpdateLastMessage(messageInput.Text);
+						UpdateEditView();
+					}
+					else 
+					{
+						SendMessage ();
+					}
+				}
+			};
+
 		}
 
 		private void SendMessage ()
@@ -63,12 +91,12 @@ namespace Chat.Droid
 			EditText messageInput = FindViewById<EditText> (Resource.Id.MessageField);
 			if (!String.IsNullOrWhiteSpace(messageInput.Text))
 			{
-				_messageManager.Send(messageInput.Text);
+				_messageManager.Send(messageInput.Text.Trim());
 				messageInput.Text = String.Empty;
 			}
 		}
 
-		private void HandleSendClick(object sender, TextView.EditorActionEventArgs e)
+		private void HandleInputActionClick(object sender, TextView.EditorActionEventArgs e)
 		{
 			e.Handled = false;
 			if (e.ActionId == ImeAction.Send)
@@ -76,6 +104,29 @@ namespace Chat.Droid
 				SendMessage ();
 				e.Handled = true;
 			}
+
+			if (e.ActionId == ImeAction.Done)
+			{
+				EditText messageInput = FindViewById<EditText> (Resource.Id.MessageField);
+				_messageManager.UpdateLastMessage (messageInput.Text);
+				UpdateEditView ();
+
+				e.Handled = true;
+			}
+		}
+
+		public void UpdateEditView(string buttonText = "Send", string inputText = "", ImeAction newAction = ImeAction.Send)
+		{
+			Button sendButton = FindViewById<Button> (Resource.Id.SendButton);
+			sendButton.Text = buttonText;
+
+			EditText messageInput = FindViewById<EditText> (Resource.Id.MessageField);
+			messageInput.Text = inputText;
+			messageInput.ImeOptions = newAction;
+
+			var imm = (InputMethodManager) GetSystemService(Context.InputMethodService);
+			imm.RestartInput(messageInput);
+
 		}
 
 		private void InitializeServerPopUp ()
@@ -135,18 +186,17 @@ namespace Chat.Droid
 				_userNameAlertDialog.SetMessage ("User name should't be empty");
 		}
 
-		private ListViewAdapter InitializeRoomHandlers ()
+		private ListViewAdapter<User> InitializeRoomHandlers ()
 		{
-			//handle roombutton click
 			Button roomsButton = FindViewById<Button> (Resource.Id.RoomButton);
 			roomsButton.Click += (object sender, EventArgs e) =>  {
 				ToggleLayoutVisability (Resource.Id.MainChatLayout);
 				ToggleLayoutVisability (Resource.Id.UsersLayout);
 			};
 
-			var userArrayAdapter = new ArrayAdapter<string> (this, Android.Resource.Layout.SimpleListItem1);
+			var usersViewAdapter = new ListViewAdapter<User> (this, Android.Resource.Layout.SimpleListItem1);
 			ListView usersList = FindViewById<ListView> (Resource.Id.UsersListView);
-			usersList.Adapter = userArrayAdapter;
+			usersList.Adapter = usersViewAdapter;
 			usersList.ItemClick += (object sender, AdapterView.ItemClickEventArgs e) =>  {
 				roomsButton.CallOnClick ();
 				TextView selectedItem = e.View as TextView;
@@ -154,7 +204,7 @@ namespace Chat.Droid
 					_messageManager.CurrentRoom = selectedItem.Text;
 			};
 
-			return new ListViewAdapter (userArrayAdapter, this);
+			return usersViewAdapter;
 		}
 
 		private void ToggleLayoutVisability(int layoutId)
@@ -178,11 +228,12 @@ namespace Chat.Droid
 			});
 		}
 
-		protected override void OnDestroy ()
+		protected override void OnStop ()
 		{
-			base.OnDestroy ();
 			_messageManager.LeaveChat ();
+			base.OnStop ();
 		}
+
 	}
 }
 
