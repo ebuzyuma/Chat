@@ -11,13 +11,12 @@ namespace Chat.Core
 {
 	public class ServerHelper
 	{
-		private readonly string _defaultServerUrl = "http://192.168.1.150:31337/";
-		private readonly string _getUrlTemplate = "{0}?token={1}";
+	    private const string DefaultServerUrl = "http://172.24.80.54:31337/";
+	    private const string GetUrlTemplate = "{0}?token={1}";
 
-		private CancellationTokenSource _cancellationTokenSource;
-
-		public int Token { get; set; }
-		private string _serverUrl;
+	    private CancellationTokenSource _cancellationTokenSource;
+        
+        private string _serverUrl;
 		public string ServerUrl 
 		{ 
 			get { return _serverUrl; } 
@@ -27,7 +26,7 @@ namespace Chat.Core
 				_cancellationTokenSource = new CancellationTokenSource ();
 				try 
 				{			
-					Uri newUri = new Uri (value);
+					var newUri = new Uri (value);
 					_serverUrl = newUri.ToString ();
 					Token = 0; // reset token when url updated
 				} 
@@ -41,7 +40,9 @@ namespace Chat.Core
 
 		private Action<string> _showInfo;
 		private Action<HttpWebResponse> _getResponseCallback;
-
+        
+        public int Token { get; set; }
+	
 		public ServerHelper (Action<string> showInfo, Action<HttpWebResponse> getResponseCallback)
 		{
 			Token = 0;
@@ -49,18 +50,18 @@ namespace Chat.Core
 			_showInfo = showInfo;
 			_getResponseCallback = getResponseCallback;
 
-			_serverUrl = _defaultServerUrl;
+			_serverUrl = DefaultServerUrl;
 		}
 
 		public async Task GetAsync ()
 		{
-			string url = String.Format (_getUrlTemplate, _serverUrl, Token);
+			string url = String.Format (GetUrlTemplate, _serverUrl, Token);
 
 			HttpWebRequest request = WebRequest.CreateHttp (url);
 			HttpWebResponse response = null;
 			try 
 			{
-				response = (HttpWebResponse) await request.GetResponseAsync (_cancellationTokenSource.Token);
+				response = await request.GetResponseAsync (_cancellationTokenSource.Token);
 
 				_getResponseCallback (response);
 				GetAsync();

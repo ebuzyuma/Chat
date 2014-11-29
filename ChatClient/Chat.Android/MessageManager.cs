@@ -20,6 +20,7 @@ namespace Chat.Core
 
 		//for updating
 		//update:message:id:body
+		//update:username:Name - not implemented
 
 		private List<Message> _allMessages;
 
@@ -52,7 +53,17 @@ namespace Chat.Core
 			}
 		}
 
-		public string UserName { get; set; }
+		private string _userName;
+		public string UserName 
+		{ 
+			get { return _userName; } 
+			set 
+			{
+				ServerHelper.PostAsync (String.Join (":", "leave", _userName));
+				_userName = value;
+				ServerHelper.PostAsync (String.Join(":", "user", _userName));
+			}
+		}
 
 		public ServerHelper ServerHelper { get; private set; }
 
@@ -65,8 +76,7 @@ namespace Chat.Core
 
 			_allMessages = new List<Message> ();
 
-			UserName = Guid.NewGuid ().ToString ().Substring (0, 8);
-			//UserName = "mob"; // just for testing
+			_userName = Guid.NewGuid ().ToString ().Substring (0, 8);
 
 			_currentRoom = String.Empty;
 
@@ -155,34 +165,37 @@ namespace Chat.Core
 
 		public void AddUsers(List<string> users) 
 		{
-			//users.Remove (UserName);
-			_usersViewAdapter.AddAll (users);
+			users.Remove (UserName);
+			_usersViewAdapter.AddAll (users.Select(p => new User(p)).ToList());
 		}
 
 		private void RemoveUsers (List<string> usersToRemove)
 		{
 			usersToRemove.ForEach (p => 
 				{ 
-					var user = new User(p);
+					var user = _usersViewAdapter.Data.FirstOrDefault(u => u.Name == p);
 					_usersViewAdapter.Remove(user); 
 				});
 		}
 
 		private void UpdateFromServer (IEnumerable<IGrouping<string, string[]>> groups)
 		{
-			foreach (IGrouping<string, string[]> items in groups) {
+			foreach (IGrouping<string, string[]> items in groups)
+            {
 				if (items.Key == "message") 
 				{
 					foreach (string[] messageSplited in items) {
 						var message = _allMessages.FirstOrDefault (p => p.Id.ToString() == messageSplited [2]);
-						if (message != null) {
+						if (message != null) 
+                        {
 							message.Body = messageSplited [3];
 							_messagesViewAdapter.Update (message);
 						}
 					}
 				} 
-				else 
+				else if (items.Key == "username")
 				{
+					//TODO add full implementation when user change name: update view and notify other users
 				}
 			}
 		}
@@ -193,9 +206,9 @@ namespace Chat.Core
 			ServerHelper.GetAsync ();
 		}
 
-		public void LeaveChat ()
+		public async Task LeaveChatAsync ()
 		{
-			ServerHelper.PostAsync (String.Join (":", "leave", UserName));
+			await ServerHelper.PostAsync (String.Join (":", "leave", UserName));
 		}
 	}
 }

@@ -40,7 +40,7 @@ namespace Chat.Droid
 		public void Update (T obj)
 		{
 			T item = Data.FirstOrDefault (p => p.Id == obj.Id);
-			if (!item.Equals(default(T)))
+			if (item != null)
 				item.MapFrom (obj);
 			NotifyDataSetChanged ();
 		}

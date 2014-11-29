@@ -9,7 +9,7 @@ namespace Chat.Core
 	{
 		public static async Task<HttpWebResponse> GetResponseAsync(this HttpWebRequest request, CancellationToken ct)
 		{
-			using (ct.Register(() => request.Abort(), useSynchronizationContext: false))
+			using (ct.Register(request.Abort, useSynchronizationContext: false))
 			{
 				try
 				{

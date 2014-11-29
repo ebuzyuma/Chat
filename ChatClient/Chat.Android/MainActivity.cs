@@ -1,19 +1,12 @@
 ﻿using System;
-using System.Linq;
-using System.Collections.Generic;
-using System.Net;
-using System.Json;
-using System.IO;
+using Chat.Core;
 
 using Android.App;
 using Android.Content;
-using Android.Runtime;
 using Android.Views;
 using Android.Widget;
 using Android.OS;
-using Chat.Core;
 using Android.Views.InputMethods;
-using System.Threading.Tasks;
 
 namespace Chat.Droid
 {
@@ -180,7 +173,7 @@ namespace Chat.Droid
 		private void UpdateUserNameClick (object sender, DialogClickEventArgs e)
 		{
 			EditText editText = _userNameAlertDialog.FindViewById<EditText>(Resource.Id.EditText1);
-			if (!String.IsNullOrWhiteSpace (editText.Text))
+			if (!String.IsNullOrWhiteSpace (editText.Text)) 
 				_messageManager.UserName = editText.Text;
 			else
 				_userNameAlertDialog.SetMessage ("User name should't be empty");
@@ -210,11 +203,14 @@ namespace Chat.Droid
 		private void ToggleLayoutVisability(int layoutId)
 		{
 			LinearLayout layout = FindViewById<LinearLayout>(layoutId);
-			if (layout != null) {
-				if (layout.Visibility == ViewStates.Visible) {
+			if (layout != null) 
+            {
+				if (layout.Visibility == ViewStates.Visible) 
+                {
 					layout.Visibility = ViewStates.Gone;
 					layout.ClearFocus ();
-				} else {
+				} else 
+                {
 					layout.Visibility = ViewStates.Visible;
 					layout.RequestFocus ();
 				}
@@ -223,14 +219,12 @@ namespace Chat.Droid
 
 		public void ShowInfoMessage(string message)
 		{
-			RunOnUiThread (() => {
-				Toast.MakeText(this, message, ToastLength.Long).Show();
-			});
+			RunOnUiThread (() => Toast.MakeText(this, message, ToastLength.Long).Show());
 		}
 
 		protected override void OnStop ()
 		{
-			_messageManager.LeaveChat ();
+			_messageManager.LeaveChatAsync ();
 			base.OnStop ();
 		}
 
